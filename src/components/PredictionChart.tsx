@@ -57,7 +57,7 @@ export default function PredictionChart({ data }: PredictionChartProps) {
         text: 'PM2.5 7-Day Forecast',
         font: {
           size: 16,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
       },
       tooltip: {

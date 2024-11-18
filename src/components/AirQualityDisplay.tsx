@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { fetchAirQualityData } from '../utils/airQuality';
 import ForecastChart from './ForecastChart';
+import PredictionChart from './PredictionChart';
 
 interface AirQualityData {
   aqi: number;
@@ -36,12 +37,18 @@ interface AQIDataPoint {
   aqi: number;
 }
 
+interface Prediction {
+  dates: string[];
+  predictions: number[];
+}
+
 const getAQIColor = (aqi: number): string => {
   if (aqi <= 50) return 'bg-gradient-to-br from-green-50 to-green-100 text-green-800 shadow-green-100';
   if (aqi <= 100) return 'bg-gradient-to-br from-yellow-50 to-yellow-100 text-yellow-800 shadow-yellow-100';
   if (aqi <= 150) return 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-800 shadow-orange-100';
   if (aqi <= 200) return 'bg-gradient-to-br from-red-50 to-red-100 text-red-800 shadow-red-100';
-  return 'bg-gradient-to-br from-purple-50 to-purple-100 text-purple-800 shadow-purple-100';
+  if (aqi <= 300) return 'bg-gradient-to-br from-purple-50 to-purple-100 text-purple-800 shadow-purple-100';
+  return 'bg-gradient-to-br from-red-900 to-red-950 text-red-100 shadow-red-900';
 };
 
 const getAQIDescription = (aqi: number): string => {
@@ -49,7 +56,8 @@ const getAQIDescription = (aqi: number): string => {
   if (aqi <= 100) return 'Moderate';
   if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
   if (aqi <= 200) return 'Unhealthy';
-  return 'Very Unhealthy';
+  if (aqi <= 300) return 'Very Unhealthy';
+  return 'Hazardous';
 };
 
 const formatLocalTime = (utcTimestamp: string): string => {
@@ -70,6 +78,7 @@ export default function AirQualityDisplay() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [historicalData, setHistoricalData] = useState<AQIDataPoint[]>([]);
+  const [predictions, setPredictions] = useState<Prediction | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,8 +89,15 @@ export default function AirQualityDisplay() {
           ...prevData,
           { timestamp: result.timestamp, aqi: result.aqi }
         ].slice(-24));
+
+        const predictionResponse = await fetch('/predictions.json');
+        if (!predictionResponse.ok) {
+          throw new Error('Failed to fetch predictions');
+        }
+        const predictionData = await predictionResponse.json();
+        setPredictions(predictionData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch air quality data');
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
@@ -165,6 +181,31 @@ export default function AirQualityDisplay() {
     );
   };
 
+  const renderPredictions = () => {
+    if (!predictions) return null;
+
+    return (
+      <div className="mb-12">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">ML-Based PM2.5 Predictions</h3>
+          <PredictionChart data={predictions} />
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {predictions.dates.map((date, index) => (
+              <div key={date} className="bg-white/50 backdrop-blur rounded-xl p-4 shadow-lg">
+                <div className="text-sm font-medium text-gray-500 mb-1">
+                  {new Date(date).toLocaleDateString()}
+                </div>
+                <div className="text-xl font-bold text-gray-800">
+                  {predictions.predictions[index].toFixed(1)} µg/m³
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -214,6 +255,8 @@ export default function AirQualityDisplay() {
               ))}
             </div>
           </div>
+
+          {renderPredictions()}
 
           {renderForecastCharts()}
         </div>

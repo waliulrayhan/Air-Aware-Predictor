@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { fetchAirQualityData } from '../utils/airQuality';
-import AQIChart from './AQIChart';
 import ForecastChart from './ForecastChart';
 
 interface AirQualityData {
@@ -215,15 +214,6 @@ export default function AirQualityDisplay() {
               ))}
             </div>
           </div>
-
-          {historicalData.length > 0 && (
-            <div className="mt-12">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">AQI Trend</h3>
-              <div className="bg-white rounded-xl shadow-lg p-4">
-                <AQIChart data={historicalData} />
-              </div>
-            </div>
-          )}
 
           {renderForecastCharts()}
         </div>
